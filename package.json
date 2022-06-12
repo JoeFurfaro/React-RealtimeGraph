@@ -1,0 +1,19 @@
+{
+  "name": "react-realtimegraph",
+  "version": "1.0.0",
+  "description": "A front-end library for creating simple, easily customizable Realtime data graphs in a React",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoeFurfaro/React-RealtimeGraph.git"
+  },
+  "author": "Joe Furfaro",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JoeFurfaro/React-RealtimeGraph/issues"
+  },
+  "homepage": "https://github.com/JoeFurfaro/React-RealtimeGraph#readme"
+}
