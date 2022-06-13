@@ -15,5 +15,12 @@
   "bugs": {
     "url": "https://github.com/JoeFurfaro/React-RealtimeGraph/issues"
   },
-  "homepage": "https://github.com/JoeFurfaro/React-RealtimeGraph#readme"
+  "homepage": "https://github.com/JoeFurfaro/React-RealtimeGraph#readme",
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.1.1",
+    "@fortawesome/free-solid-svg-icons": "^6.1.1",
+    "@fortawesome/react-fontawesome": "^0.1.18",
+    "sass": "^1.52.3",
+    "webfontloader": "^1.6.28"
+  }
 }
