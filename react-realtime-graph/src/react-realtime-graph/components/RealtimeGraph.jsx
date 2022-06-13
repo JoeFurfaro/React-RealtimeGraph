@@ -10,17 +10,23 @@ export const RealtimeGraph = ({
     datasets,
     defaultXDuration = 30,
     defaultXUnit = "seconds",
+    defaultYMin = 0,
+    defaultYMax = 0,
+    defaultAutoY = true,
 }) => {
     const [xDuration, setXDuration] = useState(defaultXDuration);
     const [xUnit, setXUnit] = useState(defaultXUnit);
     const [points, setPoints] = useState(null);
     const [svgWidth, setSvgWidth] = useState(0);
     const [svgHeight, setSvgHeight] = useState(0);
+    const [yMin, setYMin] = useState(0);
+    const [yMax, setYMax] = useState(0);
 
     const svgCanvas = useRef({});
 
     const xTicks = 4;
-    const hp = 0.8; // Height proportion
+    const yTicks = 4;
+    const hp = 0.7; // Height proportion
     const wp = 0.8; // Width proportion
 
     useEffect(() => {
@@ -73,31 +79,50 @@ export const RealtimeGraph = ({
             </div>
             <div className="rg-svg-container">
                 <svg ref={svgCanvas} className="rg-svg" width="100%" height="100%">
-                    <rect x={svgWidth * ((1 - wp) / 2)} width={svgWidth * wp} height={svgHeight * hp} style={{ fill: "#FFFFFF" }} />
+                    <rect x={svgWidth * ((1 - wp) / 2)} y={svgHeight * ((1 - hp) / 2)} width={svgWidth * wp} height={svgHeight * hp} style={{ fill: "#FFFFFF" }} />
                     {
                         [...Array(xTicks).keys()].map((i) => {
                             const x = svgWidth * wp + ((1 - wp) * svgWidth / 2) - (i * (svgWidth * wp / (xTicks - 1)));
                             return (
-                                <line
-                                    x1={x}
-                                    y1={svgHeight * hp + 5}
-                                    x2={x}
-                                    y2={svgHeight * hp - 5}
-                                    stroke="#6C6C6C" />
+                                <>
+                                    <line
+                                        x1={x}
+                                        y1={svgHeight * hp + ((1 - hp) * svgHeight / 2) + 5}
+                                        x2={x}
+                                        y2={svgHeight * hp + ((1 - hp) * svgHeight / 2) - 5}
+                                        stroke="#6C6C6C" />
+                                    <text
+                                        x={x}
+                                        y={svgHeight * hp + ((1 - hp) * svgHeight / 2) + 25}
+                                        fill="#6C6C6C"
+                                        text-anchor="middle">
+                                        {"-" + (xDuration / (xTicks - 1) * i) + (xUnit === "seconds" ? "s" : "min")}
+                                    </text>
+                                </>
+
                             );
                         })
                     }
                     {
-                        [...Array(xTicks).keys()].map((i) => {
-                            const x = svgWidth * wp + ((1 - wp) * svgWidth / 2) - (i * (svgWidth * wp / (xTicks - 1)));
+                        [...Array(yTicks).keys()].map((i) => {
+                            const y = (hp * svgHeight + ((1 - hp) / 2 * svgHeight)) - (i * (svgHeight * hp / (yTicks - 1)));
                             return (
-                                <text
-                                    x={x}
-                                    y={svgHeight * hp + 25}
-                                    fill="#6C6C6C"
-                                    text-anchor="middle">
-                                    {"-" + (xDuration / (xTicks - 1) * i) + (xUnit === "seconds" ? "s" : "min")}
-                                </text>
+                                <>
+                                    <line
+                                        x1={(svgWidth * (1 - wp) / 2) - 5}
+                                        y1={y}
+                                        x2={(svgWidth * (1 - wp) / 2) + 5}
+                                        y2={y}
+                                        stroke="#6C6C6C" />
+                                    <text
+                                        x={(svgWidth * (1 - wp) / 2) - 20}
+                                        y={y}
+                                        fill="#6C6C6C"
+                                        text-anchor="right"
+                                        alignment-baseline="middle">
+                                        {(yMax - yMin) / (yTicks - 1)}
+                                    </text>
+                                </>
 
                             );
                         })
