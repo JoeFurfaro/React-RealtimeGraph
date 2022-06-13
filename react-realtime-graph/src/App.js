@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import "./styles/test.scss";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 import { RealtimeGraph } from './react-realtime-graph/components/RealtimeGraph';
 
@@ -13,6 +13,7 @@ function App() {
 
     const [x, setX] = useState(0);
     const [curA, setCurA] = useState(f(0));
+    const [data, setData] = useState({});
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -23,19 +24,21 @@ function App() {
 
     useEffect(() => {
         setCurA(f(x));
+        setData({
+            sin: curA
+        });
     }, [x]);
 
-    const datasets = [
-        {
-            "name": "sin(x)",
-            "curVal": curA,
+    const datasets = {
+        sin: {
+            "label": "sin(x)",
             "color": "#399e41",
         }
-    ];
+    }
 
     return (
         <div className="main">
-            <RealtimeGraph title={"A graph of y = sin x"} datasets={datasets} />
+            <RealtimeGraph title={"A graph of y = sin x"} data={data} datasets={datasets} />
         </div>
     );
 }
