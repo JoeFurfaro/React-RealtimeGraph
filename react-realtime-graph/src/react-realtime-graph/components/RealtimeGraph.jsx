@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "../styles/react-realtime-graph.scss";
 import WebFont from 'webfontloader';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCog, faPause } from '@fortawesome/free-solid-svg-icons'
+import { faCog, faPause, faPlay } from '@fortawesome/free-solid-svg-icons'
 
 export const RealtimeGraph = ({
     title,
@@ -10,24 +10,34 @@ export const RealtimeGraph = ({
     datasets,
     defaultXDuration = 30,
     defaultXUnit = "seconds",
-    defaultYMin = 0,
-    defaultYMax = 0,
+    defaultYMin = -1,
+    defaultYMax = 1,
     defaultAutoY = true,
+    decimalPlaces = 2,
 }) => {
     const [xDuration, setXDuration] = useState(defaultXDuration);
     const [xUnit, setXUnit] = useState(defaultXUnit);
     const [points, setPoints] = useState(null);
     const [svgWidth, setSvgWidth] = useState(0);
     const [svgHeight, setSvgHeight] = useState(0);
-    const [yMin, setYMin] = useState(0);
-    const [yMax, setYMax] = useState(0);
+    const [yMin, setYMin] = useState(defaultYMin);
+    const [yMax, setYMax] = useState(defaultYMax);
+    const [mousePos, setMousePos] = useState(null);
+    const [paused, setPaused] = useState(false);
 
     const svgCanvas = useRef({});
 
+    const rounded = (n, places = decimalPlaces) => {
+        let pow = Math.pow(10, places);
+        let rounded = Math.round(pow * n) / pow;
+        return rounded.toFixed(places);
+    }
+
     const xTicks = 4;
     const yTicks = 4;
-    const hp = 0.7; // Height proportion
+    const hp = 0.75; // Height proportion
     const wp = 0.8; // Width proportion
+    const mt = 20;
 
     useEffect(() => {
         WebFont.load({
@@ -35,16 +45,21 @@ export const RealtimeGraph = ({
                 families: ['Inter']
             }
         });
-
         setPoints(datasets);
 
-        let mainLoop = setInterval(() => {
-            setSvgWidth(svgCanvas.current.width.baseVal.value);
-            setSvgHeight(svgCanvas.current.height.baseVal.value);
-        }, 10);
+        updateSVGDimensions();
 
-        return () => clearInterval(mainLoop);
+        window.addEventListener('resize', updateSVGDimensions);
+
+        return () => {
+            window.addEventListener('resize', updateSVGDimensions);
+        };
     }, []);
+
+    const updateSVGDimensions = () => {
+        setSvgWidth(svgCanvas.current.width.baseVal.value);
+        setSvgHeight(svgCanvas.current.height.baseVal.value);
+    }
 
     useEffect(() => {
         if (points === null)
@@ -69,17 +84,32 @@ export const RealtimeGraph = ({
                     </h1>
                 </div>
                 <div className="rg-control-buttons">
-                    <button type="text" className="rg-control-button">
-                        <FontAwesomeIcon icon={faPause} />
+                    <button type="text" className="rg-control-button" onClick={() => setPaused(!paused)}>
+                        <FontAwesomeIcon icon={paused ? faPlay : faPause} />
                     </button>
                     <button type="text" className="rg-control-button">
                         <FontAwesomeIcon icon={faCog} />
                     </button>
                 </div>
             </div>
-            <div className="rg-svg-container">
+            <div className="rg-svg-container" onLoad={updateSVGDimensions}>
                 <svg ref={svgCanvas} className="rg-svg" width="100%" height="100%">
-                    <rect x={svgWidth * ((1 - wp) / 2)} y={svgHeight * ((1 - hp) / 2)} width={svgWidth * wp} height={svgHeight * hp} style={{ fill: "#FFFFFF" }} />
+                    <rect
+                        x={svgWidth * ((1 - wp) / 2)}
+                        y={mt}
+                        width={svgWidth * wp}
+                        height={svgHeight * hp}
+                        style={{ fill: "#FFFFFF" }}
+                        onMouseMove={(e) => {
+                            let rect = e.target.getBoundingClientRect();
+                            let curX = e.clientX - rect.left;
+                            let curY = e.clientY - rect.top;
+                            setMousePos({ x: curX, y: curY });
+                        }}
+                        onMouseOut={() => {
+                            setMousePos(null);
+                        }}
+                    />
                     {
                         [...Array(xTicks).keys()].map((i) => {
                             const x = svgWidth * wp + ((1 - wp) * svgWidth / 2) - (i * (svgWidth * wp / (xTicks - 1)));
@@ -87,16 +117,17 @@ export const RealtimeGraph = ({
                                 <>
                                     <line
                                         x1={x}
-                                        y1={svgHeight * hp + ((1 - hp) * svgHeight / 2) + 5}
+                                        y1={svgHeight * hp + mt + 5}
                                         x2={x}
-                                        y2={svgHeight * hp + ((1 - hp) * svgHeight / 2) - 5}
-                                        stroke="#6C6C6C" />
+                                        y2={svgHeight * hp + mt - 5}
+                                        stroke="#6C6C6C"
+                                    />
                                     <text
                                         x={x}
-                                        y={svgHeight * hp + ((1 - hp) * svgHeight / 2) + 25}
+                                        y={svgHeight * hp + mt + 25}
                                         fill="#6C6C6C"
-                                        text-anchor="middle">
-                                        {"-" + (xDuration / (xTicks - 1) * i) + (xUnit === "seconds" ? "s" : "min")}
+                                        textAnchor="middle">
+                                        {"-" + rounded(xDuration / (xTicks - 1) * i, 1) + (xUnit === "seconds" ? "s" : "min")}
                                     </text>
                                 </>
 
@@ -105,7 +136,7 @@ export const RealtimeGraph = ({
                     }
                     {
                         [...Array(yTicks).keys()].map((i) => {
-                            const y = (hp * svgHeight + ((1 - hp) / 2 * svgHeight)) - (i * (svgHeight * hp / (yTicks - 1)));
+                            const y = (hp * svgHeight + mt) - (i * (svgHeight * hp / (yTicks - 1)));
                             return (
                                 <>
                                     <line
@@ -118,12 +149,88 @@ export const RealtimeGraph = ({
                                         x={(svgWidth * (1 - wp) / 2) - 20}
                                         y={y}
                                         fill="#6C6C6C"
-                                        text-anchor="right"
-                                        alignment-baseline="middle">
-                                        {(yMax - yMin) / (yTicks - 1)}
+                                        textAnchor="end"
+                                        alignmentBaseline="middle">
+                                        {rounded(yMin + (i * (yMax - yMin) / (yTicks - 1)))}
                                     </text>
                                 </>
 
+                            );
+                        })
+                    }
+                    {
+                        mousePos === null ? null : (
+                            <>
+                                <line
+                                    x1={(svgWidth * (1 - wp) / 2) + mousePos.x}
+                                    y1={svgHeight * hp + mt + 40}
+                                    x2={(svgWidth * (1 - wp) / 2) + mousePos.x}
+                                    y2={mt + mousePos.y}
+                                    stroke="#949494"
+                                    strokeDasharray={"5,5"}
+                                    style={{ pointerEvents: "none" }}
+                                />
+                                <text
+                                    x={(svgWidth * (1 - wp) / 2) + mousePos.x}
+                                    y={svgHeight * hp + mt + 55}
+                                    fill="#949494"
+                                    textAnchor="middle"
+                                    alignmentBaseline="middle">
+                                    {"-" + rounded((1 - mousePos.x / (svgWidth * wp)) * xDuration, 1) + (xUnit === "seconds" ? "s" : "min")}
+                                </text>
+                                <line
+                                    x1={(svgWidth * (1 - wp) / 2) + mousePos.x}
+                                    y1={mt + mousePos.y}
+                                    x2={(svgWidth * (1 - wp) / 2) - 50}
+                                    y2={mt + mousePos.y}
+                                    stroke="#949494"
+                                    strokeDasharray={"5,5"}
+                                    style={{ pointerEvents: "none" }}
+                                />
+                                <text
+                                    x={(svgWidth * (1 - wp) / 2) - 60}
+                                    y={mt + mousePos.y}
+                                    fill="#949494"
+                                    textAnchor="end"
+                                    alignmentBaseline="middle">
+                                    {rounded((svgHeight * hp - mousePos.y) / (svgHeight * hp) * (yMax - yMin) + yMin)}
+                                </text>
+                            </>
+                        )
+                    }
+                    {
+                        points === null ? null : Object.keys(points).map((dataset) => {
+                            let dataPoints = points[dataset].data;
+                            if (typeof points[dataset].data === 'undefined')
+                                return null;
+                            return (
+                                <>
+                                    {
+                                        dataPoints.map((p) => {
+                                            let minTime = 0;
+                                            if (xUnit === "seconds") {
+                                                minTime = Date.now() - xDuration * 1000;
+                                            } else {
+                                                minTime = Date.now() - xDuration * 60 * 1000;
+                                            }
+                                            if (p.time > minTime) {
+                                                let now = Date.now();
+                                                let x = svgWidth * ((1 - wp) / 2) + (svgWidth * wp) * ((p.time - minTime) / (now - minTime));
+                                                let y = mt + (svgHeight * hp) * (1 - ((p.value - yMin) / (yMax - yMin)));
+                                                // console.log(y);
+                                                return (
+                                                    <circle
+                                                        cx={x}
+                                                        cy={y}
+                                                        r={2}
+                                                        fill={"#FF0000"}
+                                                        style={{ pointerEvents: "none" }}
+                                                    />
+                                                );
+                                            }
+                                        })
+                                    }
+                                </>
                             );
                         })
                     }
